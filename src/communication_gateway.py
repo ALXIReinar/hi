@@ -6,7 +6,7 @@ from abc import abstractmethod
 
 from time import sleep
 
-from src.config import COMMUNICATION_GATEWAY_QUEUE_NAME, CRITICALITY_STR, \
+from src.config import COMMUNICATION_GATEWAY_QUEUE_NAME, CONTROL_SYSTEM_QUEUE_NAME, CRITICALITY_STR, \
     DEFAULT_LOG_LEVEL, LOG_DEBUG, LOG_ERROR, LOG_INFO
 from src.queues_dir import QueuesDirectory
 from src.event_types import Event, ControlEvent
@@ -94,9 +94,17 @@ class BaseCommunicationGateway(Process):
         self._log_message(LOG_INFO, "получен новый маршрут, отправляем в получателям")
         self._send_mission_to_consumers()
 
+
     @abstractmethod
-    def _send_mission_to_consumers(self):
-        pass
+    def _send_mission_to_consumers(self, mission):
+        # отправка сегмента маршрута в систему управления
+        event = Event(source=BaseCommunicationGateway.event_source_name,
+                      destination=CONTROL_SYSTEM_QUEUE_NAME,
+                      operation="set_mission", parameters=self._mission
+        )
+        control_q: Queue = self._queues_dir.get_queue(CONTROL_SYSTEM_QUEUE_NAME)
+        control_q.put(event)
+
 
     def stop(self):
         self._control_q.put(ControlEvent(operation='stop'))

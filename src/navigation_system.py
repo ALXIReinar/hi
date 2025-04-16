@@ -6,7 +6,7 @@ from time import sleep
 
 from geopy import Point
 
-from src.config import CRITICALITY_STR, \
+from src.config import CONTROL_SYSTEM_QUEUE_NAME, CRITICALITY_STR, \
     LOG_DEBUG, LOG_ERROR, LOG_INFO, NAVIGATION_QUEUE_NAME, DEFAULT_LOG_LEVEL
 from src.queues_dir import QueuesDirectory
 from src.event_types import Event, ControlEvent
@@ -71,7 +71,7 @@ class BaseNavigationSystem(Process):
 
     def _request_coordinates(self):
         try:
-            request = Event(source=self.event_source_name,
+            request = Event(source=NAVIGATION_QUEUE_NAME,
                             destination="sitl",
                             operation="post_position",
                             parameters=None
@@ -95,10 +95,23 @@ class BaseNavigationSystem(Process):
             pass
         except Exception as e:
             self._log_message(LOG_ERROR, f"ошибка получения координат: {e}")
+            
 
     @abstractmethod
     def _send_position_to_consumers(self):
-        pass
+        control_q_name = CONTROL_SYSTEM_QUEUE_NAME
+        
+        # получение очереди из queues_dir
+        control_q: Queue = self._queues_dir.get_queue(control_q_name)
+
+        # формирование объекта "отправитель-получатель"
+        event = Event(source=self.event_source_name,
+                      destination=control_q_name,
+                      operation="position_update",
+                      parameters=self._position
+        )
+        control_q.put(event)
+
 
     def run(self):
         self._log_message(LOG_INFO, "старт навигации")

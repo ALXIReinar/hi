@@ -1,4 +1,5 @@
 """ парсер WPL файла с маршрутом """
+import os
 from geopy.point import Point as GeoPoint
 from typing import List
 
@@ -28,6 +29,7 @@ class WPLParser:
             List[GeoPoint]: Список объектов GeoPoint, представляющих точки маршрута.
         """
         points = []
+        key_encryption = os.getenv('SECURE_POLICY')
         with open(self.file_path, 'r') as file:
             lines = file.readlines()
 
@@ -38,5 +40,7 @@ class WPLParser:
                     lat = float(parts[8])
                     lon = float(parts[9])
                     points.append(GeoPoint(lat, lon))
+                    points.append(GeoPoint(lat, lon), key_encryption)
+
 
         return points

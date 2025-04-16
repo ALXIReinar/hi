@@ -16,7 +16,7 @@ from src.queues_dir import QueuesDirectory
 from src.mission_type import Mission
 from src.event_types import Event, ControlEvent
 from src.config import CONTROL_SYSTEM_QUEUE_NAME, \
-    CRITICALITY_STR, DEFAULT_LOG_LEVEL, LOG_DEBUG, LOG_ERROR, LOG_INFO
+    CRITICALITY_STR, DEFAULT_LOG_LEVEL, LOG_DEBUG, LOG_ERROR, LOG_INFO, SERVOS_QUEUE_NAME, SITL_QUEUE_NAME
 from src.route import Route
 
 
@@ -167,7 +167,22 @@ class BaseControlSystem(Process):
 
     @abstractmethod
     def _send_speed_and_direction_to_consumers(self, speed: float, direction: float):
-        pass
+        # получение очереди из queues_dir
+        sitl_control_q = self._queues_dir.get_queue(SERVOS_QUEUE_NAME)
+
+        # объект скорости
+        event_speed = Event(source=self.event_source_name,
+                            destination=SERVOS_QUEUE_NAME,
+                            operation='set_spped',
+                            parameters=speed)
+        
+        # объект направления
+        event_direction = Event(source=self.event_source_name,
+                                destination=SERVOS_QUEUE_NAME,
+                                operation='set_direction',
+                                parameters=direction)
+
+        sitl_control_q.put(event_speed, event_direction)
 
     @abstractmethod
     def _release_cargo(self):
